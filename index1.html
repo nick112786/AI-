@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>語音輸入表單</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #cccccc;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .listening {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .not-listening {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        #voiceForm {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>業務選擇</h1>
+    <div class="form-group">
+        <label for="businessType">請選擇業務:</label>
+        <select id="businessType">
+            <option value="">請選擇</option>
+            <option value="deposit">存款</option>
+            <option value="withdraw">提款</option>
+            <option value="transfer">轉帳</option>
+        </select>
+    </div>
+
+    <h1>語音輸入表單</h1>
+    <div id="status" class="status not-listening">未開始語音輸入</div>
+
+    <form id="voiceForm">
+        <div id="depositFields" style="display: none;">
+            <div class="form-group">
+                <label for="depositAccount">存款帳號:</label>
+                <input type="text" id="depositAccount" name="depositAccount">
+            </div>
+
+            <div class="form-group">
+                <label for="depositAmount">存款金額:</label>
+                <input type="number" id="depositAmount" name="depositAmount">
+            </div>
+
+            <div class="form-group">
+                <label for="depositNote">存摺備註:</label>
+                <input type="text" id="depositNote" name="depositNote">
+            </div>
+        </div>
+
+        <div id="withdrawFields" style="display: none;">
+            <div class="form-group">
+                <label for="withdrawAccount">提款帳號:</label>
+                <input type="text" id="withdrawAccount" name="withdrawAccount">
+            </div>
+
+            <div class="form-group">
+                <label for="withdrawAmount">提款金額:</label>
+                <input type="number" id="withdrawAmount" name="withdrawAmount">
+            </div>
+
+            <div class="form-group">
+                <label for="withdrawNote">存摺備註:</label>
+                <input type="text" id="withdrawNote" name="withdrawNote">
+            </div>
+        </div>
+
+        <div id="transferFields" style="display: none;">
+            <div class="form-group">
+                <label for="fromAccount">轉出帳號:</label>
+                <input type="text" id="fromAccount" name="fromAccount">
+            </div>
+
+            <div class="form-group">
+                <label for="toAccount">轉入帳號:</label>
+                <input type="text" id="toAccount" name="toAccount">
+            </div>
+
+            <div class="form-group">
+                <label for="transferAmount">轉入金額:</label>
+                <input type="number" id="transferAmount" name="transferAmount">
+            </div>
+        </div>
+
+        <button type="button" id="startBtn">開始語音輸入</button>
+        <button type="button" id="stopBtn" disabled>停止語音輸入</button>
+    </form>
+
+    <script>
+        document.getElementById('businessType').addEventListener('change', function() {
+            const depositFields = document.getElementById('depositFields');
+            const withdrawFields = document.getElementById('withdrawFields');
+            const transferFields = document.getElementById('transferFields');
+            const form = document.getElementById('voiceForm');
+
+            // 隱藏所有業務類型欄位
+            depositFields.style.display = 'none';
+            withdrawFields.style.display = 'none';
+            transferFields.style.display = 'none';
+
+            // 根據選擇的業務顯示對應的欄位
+            if (this.value === 'deposit') {
+                depositFields.style.display = 'block';
+            } else if (this.value === 'withdraw') {
+                withdrawFields.style.display = 'block';
+            } else if (this.value === 'transfer') {
+                transferFields.style.display = 'block';
+            }
+
+            form.style.display = this.value ? 'block' : 'none';
+        });
+
+        // 檢查瀏覽器支援
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert('您的瀏覽器不支援語音辨識功能');
+        }
+
+        // 初始化語音辨識
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'zh-TW';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        // 取得 DOM 元素
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const status = document.getElementById('status');
+
+        // 語音命令對應表
+        const commands = {
+            '存款帳號': 'depositAccount',
+            '存款金額': 'depositAmount',
+            '存摺備註': 'depositNote',
+            '提款帳號': 'withdrawAccount',
+            '提款金額': 'withdrawAmount',
+            '存摺備註': 'withdrawNote',
+            '轉出帳號': 'fromAccount',
+            '轉入帳號': 'toAccount',
+            '轉入金額': 'transferAmount'
+        };
+
+        // 開始按鈕事件
+        startBtn.onclick = () => {
+            recognition.start();
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            status.textContent = '正在聆聽...';
+            status.className = 'status listening';
+        };
+
+        // 停止按鈕事件
+        stopBtn.onclick = () => {
+            recognition.stop();
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            status.textContent = '已停止聆聽';
+            status.className = 'status not-listening';
+        };
+
+        // 處理語音辨識結果
+        recognition.onresult = (event) => {
+            const result = event.results[event.results.length - 1];
+            const transcript = result[0].transcript.trim().toLowerCase();
+            
+            console.log('辨識結果:', transcript);
+
+            // 處理各種命令
+            for (const [command, fieldId] of Object.entries(commands)) {
+                if (transcript.includes(command.toLowerCase())) {
+                    const value = transcript.replace(command.toLowerCase(), '').trim();
+                    const field = document.getElementById(fieldId);
+                    field.value = value;
+                    break;
+                }
+            }
+        };
+
+        // 錯誤處理
+        recognition.onerror = (event) => {
+            console.error('語音辨識錯誤:', event.error);
+            status.textContent = '發生錯誤: ' + event.error;
+            status.className = 'status not-listening';
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        };
+
+        // 語音辨識結束事件
+        recognition.onend = () => {
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            status.textContent = '語音輸入已結束';
+            status.className = 'status not-listening';
+        };
+
+    </script>
+</body>
+</html>
